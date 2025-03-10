@@ -5,7 +5,7 @@ output: html_notebook
   
 ---
 #
-The mass spec files of raw data are searched and analysised usising proteome discoverer that byonic as a peptide seach node. this analysis workflow also uses a LFQ style quantifcation method using peak intnsities eaven when a sample does not a MS2 PSM corisponding to the peak in staed the peak is stilll quantifed on the basis that a PSM is found that in anouth sample that matches the peak's retention times.
+The mass spec files of raw data are searched and analysised usising proteome discoverer that byonic as a peptide seach node. this analysis workflow uses a LFQ style quantifcation method using peak intnsities eaven when a sample does not a MS2 PSM corisponding to the peak in staed the peak is stilll quantifed on the basis that a PSM is found that in anouth sample that matches the peak's retention times.
 ```{r}
 ## Get started by loading the packages
 library('tidyr')
@@ -1048,6 +1048,19 @@ knitr::kable(
 ```
 
 ```{r}
+DDA_DAPs <- ProtAbun_t_test_results %>% 
+  filter(Log2_FC > 0.5 & `-Log10_p.value` < 0.05) 
+
+write.csv(DIA_DAPs, file = "DDA_DAPs.csv")
+
+knitr::kable(
+  DDA_DAPs,
+  caption = "DDA plasma proteomics - Differentaly Aubundant Proteins",
+  digits = 2,
+  na = 'NA')
+```
+
+```{r}
   library("EnhancedVolcano")
 ```
 
@@ -1162,6 +1175,10 @@ knitr::kable(
   digits = 2,
   na = 'NA'
 )
+```
+```{r}
+DIA_DAPs %>%
+  summarise(n_distinct(protein))
 ```
 
 ```{r}
@@ -1440,7 +1457,7 @@ Sia_list <- lapply(glycoPSM_list, Sia_table)
 fuc_list <- lapply(glycoPSM_list, fuc_table)
 glycomp_list <- lapply(glycoPSM_list, glycomp_table)
 glyc_class_list <- lapply(glycoPSM_list, class_table)
-````
+```
 
 ```{r}
 fuc_count_list <- lapply(glycoPSM_list, count_fuc_table)
@@ -1501,5 +1518,418 @@ save_list_to_excel(sia_count_list, "glyprot_sia_count.xlsx") # bug with the outp
 
 ```{r}
 
+  unique_glycosites <- glycoPSMs %>%
+  group_by(gene_name) %>%
+  summarise(unique_glycosites = n_distinct(protein_glycosite))
 ```
 
+
+```{r}
+unique_glycoproteins <- glycoPSMs %>%
+  group_by(protein_accessions) %>%
+  summarise(unique_glycoprot = n_distinct(protein_accessions))
+```
+
+```{r}
+# Ensure gsite_ID is created
+glycoPSMs <- glycoPSMs %>%
+  mutate(gsite_ID = paste(protein_accessions, protein_glycosite, sep = "_"))
+
+# Group by gsite_ID and split into a named list
+glycosite_list <- glycoPSMs %>%
+  group_by(gsite_ID) %>%
+  group_split() %>%
+  setNames(unique(glycoPSMs$gsite_ID))  # Extract unique gsite_IDs in the same order as group_split()
+
+```
+
+```{r}
+Sia_glycosite_list <- lapply(glycosite_list, Sia_table)
+fuc_glycosite_list <- lapply(glycosite_list, fuc_table)
+glycomp_glycosite_list <- lapply(glycosite_list, glycomp_table)
+glyc_class_glycosite_list <- lapply(glycosite_list, class_table)
+fuc_count_glycosite_list <- lapply(glycosite_list, count_fuc_table)
+sia_count_glycosite_list <- lapply(glycosite_list, count_sia_table)
+```
+
+```{r}
+# Apply the function to multiple lists
+save_list_to_excel(Sia_glycosite_list, "glycosite_sia.xlsx")
+save_list_to_excel(glycomp_glycosite_list, "glycosite_glycomp.xlsx")
+save_list_to_excel(glyc_class_glycosite_list, "glycosite_class.xlsx")
+save_list_to_excel(fuc_count_glycosite_list, "glycosite_fuc_count.xlsx") # bug with the output of this  
+save_list_to_excel(sia_count_glycosite_list, "glycosite_sia_count.xlsx") # bug with the output of this 
+save_list_to_excel(fuc_glycosite_list, "glycosite_fuc.xlsx")
+
+```
+
+```{r}
+count_entries_per_df <- function(df_list) {
+  if (!is.list(df_list)) {
+    stop("Input must be a list of data frames")
+  }
+  
+  # Ensure all elements have names
+  if (is.null(names(df_list))) {
+    names(df_list) <- paste0("DF", seq_along(df_list))
+  } else {
+    missing_names <- names(df_list) == "" | is.na(names(df_list))
+    names(df_list)[missing_names] <- paste0("DF", which(missing_names))
+  }
+  
+  # Create a data frame with names and row counts
+  result <- data.frame(
+    Name = names(df_list),
+    Row_Count = sapply(df_list, nrow),
+    stringsAsFactors = FALSE
+  )
+  
+  return(result)
+}
+
+# Example usage:
+# df1 <- data.frame(a = 1:5, b = 6:10)
+# df2 <- data.frame(x = 1:3, y = 4:6)
+# df3 <- data.frame(z = 7:9)
+# df_list <- list(df1 = df1, df2 = df2, df3)
+# count_entries_per_df(df_list)
+
+```
+
+```{r}
+gprot_psm_count <- count_entries_per_df(glycoPSM_list)
+gsite_psm_count <- count_entries_per_df(glycosite_list)
+
+```
+
+```{r}
+glycoPSMs %>% filter(is.na(gene_name))
+```
+
+```{r}
+check_df <-  glycosite_list[["P0DOX5_299"]]
+
+```
+
+```{r}
+# Check the number of groups
+length(glycoPSMs %>% group_by(protein_accessions, protein_glycosite) %>% group_split())
+
+# Check the number of unique names
+glycoPSMs %>%
+  distinct(protein_accessions, protein_glycosite) %>%
+  mutate(name = paste(protein_accessions, protein_glycosite, sep = "_")) %>%
+  pull(name) %>%
+  length()
+
+```
+
+```{r}
+# Check if lengths match
+length(glycosite_list)  # Number of groups
+length(unique(glycoPSMs$gsite_ID))  # Number of unique site IDs
+
+# Preview the first few names assigned
+names(glycosite_list)[1:20]
+unique(glycoPSMs$gsite_ID)[1:20]
+
+```
+
+```{r}
+
+# Ensure gsite_list is a vector of distinct gsite_IDs
+gsite_list <- glycoPSMs %>%
+  dplyr::select(gsite_ID) %>%  # Ensure we are using dplyr's select
+  distinct() %>%
+  pull(gsite_ID)  # This returns a vector, not a list
+
+# Function to split glycoPSMs into a list of data frames by gsite_ID
+split_by_gsite <- function(data, gsite_list) {
+  gsite_data_list <- lapply(gsite_list, function(gsite) {
+    data %>% filter(gsite_ID == gsite)
+  })
+  
+  # Naming the list elements with gsite_IDs for easy identification
+  names(gsite_data_list) <- as.character(gsite_list)  # Ensure that names are character strings
+  
+  return(gsite_data_list)
+}
+
+# Example usage
+gsitePSM_list <- split_by_gsite(glycoPSMs, gsite_list)
+
+
+```
+
+```{r}
+check_df <-  gsitePSM_list[["P01023_55"]]
+
+```
+
+```{r}
+glycomp_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, glycan_composition) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, glycan_composition, relative_abundance)
+}
+fuc_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, contains_fuc) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, contains_fuc, relative_abundance)
+}
+Sia_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, contains_neu_ac) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, contains_neu_ac, relative_abundance)
+}
+class_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, glycan_class) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, glycan_class, relative_abundance)
+}
+count_sia_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, sia_count) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, sia_count, relative_abundance)
+}
+count_fuc_table <- function(input_df) {
+  input_df %>%
+    group_by(sample, fuc_count) %>%
+    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
+    # Calculate relative abundance after summarization
+    group_by(sample) %>%
+    mutate(
+      total_intensity = sum(sum_intensity),
+      relative_abundance = (sum_intensity / total_intensity) * 100
+    ) %>%
+    ungroup() %>%
+    # Join disease_status to each row based on sample
+    left_join(input_df %>% select(sample, disease_status) %>% distinct(), by = "sample") %>%
+    select(sample, disease_status, fuc_count, relative_abundance)
+}
+
+```
+
+```{r}
+Sia_glycoprot_list <- lapply(glycoPSM_list, Sia_table)
+fuc_glycoprot_list <- lapply(glycoPSM_list, fuc_table)
+glycomp_glycoprot_list <- lapply(glycoPSM_list, glycomp_table)
+glyc_class_glycoprot_list <- lapply(glycoPSM_list, class_table)
+fuc_count_glycoprot_list <- lapply(glycoPSM_list, count_fuc_table)
+sia_count_glycoprot_list <- lapply(glycoPSM_list, count_sia_table)
+```
+
+```{r}
+Sia_glycosite_list <- lapply(glycosite_list, Sia_table)
+fuc_glycosite_list <- lapply(glycosite_list, fuc_table)
+glycomp_glycosite_list <- lapply(glycosite_list, glycomp_table)
+glyc_class_glycosite_list <- lapply(glycosite_list, class_table)
+fuc_count_glycosite_list <- lapply(glycosite_list, count_fuc_table)
+sia_count_glycosite_list <- lapply(glycosite_list, count_sia_table)
+```
+
+
+```{r}
+# Load required libraries
+library(dplyr)
+library(ggplot2)
+library(openxlsx2)
+
+# Function to perform analysis on a list of data frames with a filename prefix option
+perform_analysis_on_list <- function(data_list, group_col, value_col, file_prefix = "Analysis_") {
+  
+  output_file <- paste0(file_prefix, "analysis_results.xlsx")  # Create the output filename
+  wb <- wb_workbook()  # Create a new workbook for results
+
+  for (i in seq_along(data_list)) {
+    data <- data_list[[i]]  # Extract the individual data frame
+    dataset_name <- paste0("Dataset_", i)  # Naming convention for each dataset
+
+    # Count samples in each disease status group
+    disease_counts <- data %>%
+      group_by(!!sym(group_col)) %>%
+      summarise(count = n(), .groups = "drop")
+
+    # Check if there are at least 3 samples in each group
+    if (all(c("Healthy", "MECFS") %in% data[[group_col]]) &&
+        sum(data[[group_col]] == "Healthy") >= 3 &&
+        sum(data[[group_col]] == "MECFS") >= 3) {
+
+      # Calculate descriptive statistics
+      descriptive_stats <- data %>%
+        group_by(!!sym(group_col)) %>%
+        summarise(
+          mean = mean(!!sym(value_col), na.rm = TRUE),
+          sd = sd(!!sym(value_col), na.rm = TRUE),
+          median = median(!!sym(value_col), na.rm = TRUE),
+          min = min(!!sym(value_col), na.rm = TRUE),
+          max = max(!!sym(value_col), na.rm = TRUE),
+          count = n(),
+          .groups = "drop"
+        )
+
+      # Perform Welch t-test
+      t_test_result <- t.test(
+        !!sym(value_col) ~ !!sym(group_col), 
+        data = data, 
+        var.equal = FALSE
+      )
+
+      # Perform ANOVA
+      anova_result <- aov(!!sym(value_col) ~ !!sym(group_col), data = data)
+      anova_summary <- summary(anova_result)
+
+     # Prepare results for Excel using a stepwise approach
+descriptive_stats_name <- paste0(dataset_name, "_Descriptive Stats")
+t_test_name <- paste0(dataset_name, "_T-test Result")
+anova_name <- paste0(dataset_name, "_ANOVA Result")
+
+# Create each component separately
+descriptive_stats_data <- descriptive_stats
+t_test_data <- data.frame(
+  Statistic = t_test_result$statistic,
+  P_Value = t_test_result$p.value,
+  DF = t_test_result$parameter,
+  Confidence_Lower = t_test_result$conf.int[1],
+  Confidence_Upper = t_test_result$conf.int[2]
+)
+anova_data <- as.data.frame(anova_summary[[1]])
+
+# Combine into results list
+results_list <- list(
+  descriptive_stats_name = descriptive_stats_data,
+  t_test_name = t_test_data,
+  anova_name = anova_data
+)
+
+# Rename list elements properly
+names(results_list) <- c(descriptive_stats_name, t_test_name, anova_name)
+
+
+
+    # Pivot data to wide format by sample column
+wide_data <- data %>%
+  pivot_wider(
+    names_from = sample,
+    values_from = !!sym(value_col),
+    values_fill = NA   # Fill missing values with NA
+  )
+
+# Add pivoted data to results list
+results_list[[paste0(dataset_name, "_Wide Data")]] <- wide_data
+
+      # If t-test is significant (p < 0.05), create a boxplot
+      if (t_test_result$p.value < 0.05) {
+        boxplot <- ggplot(data, aes(x = !!sym(group_col), y = !!sym(value_col))) +
+          geom_boxplot(aes(fill = !!sym(group_col))) +
+          theme_minimal() +
+          labs(title = paste("Boxplot for", dataset_name),
+               x = "Disease Status",
+               y = "Measurement Value") +
+          scale_fill_manual(values = c("Healthy" = "blue", "MECFS" = "red"))
+        
+        # Save the boxplot with prefix
+        plot_filename <- paste0(file_prefix, "boxplot_", i, ".png")
+        ggsave(plot_filename, plot = boxplot, width = 6, height = 4)
+        
+        # Add image path to results
+        results_list[[paste0(dataset_name, "_Boxplot")]] <- plot_filename
+      }
+
+      # Write all results for this dataset to the workbook
+      for (name in names(results_list)) {
+        wb <- wb_add_worksheet(wb, name)  # Add worksheet
+        wb <- wb_add_data(wb, sheet = name, x = results_list[[name]])  # Add data to the worksheet
+      }
+      
+    } else {
+      message("Skipping ", dataset_name, ": Not enough samples in each disease category (at least 3 per group required).")
+    }
+  }
+
+  # Save the workbook with prefix
+  wb_save(wb, output_file)
+  message("Analysis complete. Results saved to: ", output_file)
+}
+
+# Example usage:
+# Assume `data_list` is a list of data frames, each containing `disease_status` and `measurement_value`
+# Example call with a custom prefix:
+
+#perform_analysis_on_list(your_data_list, "disease_status", "measurement_value", "MyResults_")
+
+```
+
+```{r}
+perform_analysis_on_list(Sia_glycoprot_list, "disease_status", "relative_abundance", "Sia_gprot_")
+perform_analysis_on_list(glycomp_glycoprot_list, "disease_status", "relative_abundance", "Glycomp_gprot_")
+perform_analysis_on_list(glyc_class_glycoprot_list, "disease_status", "relative_abundance", "glyClass_gprot_")
+perform_analysis_on_list(fuc_count_glycoprot_list, "disease_status", "relative_abundance", "Fuc_count_gprot_")
+perform_analysis_on_list(sia_count_glycoprot_list, "disease_status", "relative_abundance", "Sia_count_gprot_")
+perform_analysis_on_list(fuc_glycoprot_list, "disease_status", "relative_abundance", "Fuc_gprot_")
+
+perform_analysis_on_list(Sia_glycosite_list, "disease_status", "relative_abundance", "Sia_gsite_")
+perform_analysis_on_list(fuc_glycosite_list, "disease_status", "relative_abundance", "Fuc_gsite_")
+perform_analysis_on_list(glycomp_glycosite_list, "disease_status", "relative_abundance", "Glycomp_gsite_")
+perform_analysis_on_list(glyc_class_glycosite_list, "disease_status", "relative_abundance", "glyClass_gsite_")
+perform_analysis_on_list(fuc_count_glycosite_list, "disease_status", "relative_abundance", "Fuc_count_gsite_")
+perform_analysis_on_list(sia_count_glycosite_list, "disease_status", "relative_abundance", "Sia_count_gsite_")
+
+```
+
+Sia_glycoprot_list <- lapply(glycoPSM_list, Sia_table)
+fuc_glycoprot_list <- lapply(glycoPSM_list, fuc_table)
+glycomp_glycoprot_list <- lapply(glycoPSM_list, glycomp_table)
+glyc_class_glycoprot_list <- lapply(glycoPSM_list, class_table)
+fuc_count_glycoprot_list <- lapply(glycoPSM_list, count_fuc_table)
+sia_count_glycoprot_list <- lapply(glycoPSM_list, count_sia_table)
