@@ -25,7 +25,7 @@ library("hrbrthemes")
 library("janitor")
 library(openxlsx2)
 
-
+library(scales)
 
 #' 
 #' 
@@ -362,12 +362,7 @@ glycoPSMs <- glycoPSMs %>%
 
 
 #--------------------------------------------------------------------------------------------------------------------
-library(dplyr)
-library(stringr)
-library(ggplot2)
-library(viridis)
-library(hrbrthemes)
-library(scales)
+
 
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -746,98 +741,6 @@ write_csv(Gpeps_Sia, "Gpeps_Sia.csv")
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Function for Glycan Composition Table with Relative Abundance
-glycomp_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, glycan_composition) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
-
-# Function for Fuc Table (contains_fuc column) with Relative Abundance
-fuc_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, contains_fuc) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
-
-# Function for Sia Table (contains_neu_ac column) with Relative Abundance
-Sia_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, contains_neu_ac) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Remove sum_intensity and total_intensity, then pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
-
-class_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, glycan_class) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
-
-count_sia_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, sia_count) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
-
-count_fuc_table <- function(input_df) {
-  input_df %>%
-    group_by(sample, fuc_count) %>%
-    summarise(sum_intensity = sum(intensity), .groups = "drop") %>%
-    # Calculate the total intensity per sample
-    group_by(sample) %>%
-    mutate(total_intensity = sum(sum_intensity)) %>%
-    # Calculate relative abundance for each group
-    mutate(relative_abundance = (sum_intensity / total_intensity) * 100) %>%
-    ungroup() %>%
-    # Pivot only the relative abundance
-    dplyr::select(-sum_intensity, -total_intensity) %>%
-    pivot_wider(names_from = sample, values_from = relative_abundance)
-}
 
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -845,9 +748,6 @@ Sia_list <- lapply(glycoPSM_list, Sia_table)
 fuc_list <- lapply(glycoPSM_list, fuc_table)
 glycomp_list <- lapply(glycoPSM_list, glycomp_table)
 glyc_class_list <- lapply(glycoPSM_list, class_table)
-
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 fuc_count_list <- lapply(glycoPSM_list, count_fuc_table)
 sia_count_list <- lapply(glycoPSM_list, count_sia_table)
 
@@ -895,12 +795,12 @@ save_list_to_excel <- function(data_list, file_name) {
 }
 
 # Apply the function to multiple lists
-#save_list_to_excel(Sia_list, "glyprot_sia.xlsx")
-#save_list_to_excel(glycomp_list, "glyprot_glycomp.xlsx")
-#save_list_to_excel(glyc_class_list, "glyprot_class.xlsx")
+save_list_to_excel(Sia_list, "glyprot_sia.xlsx")
+save_list_to_excel(glycomp_list, "glyprot_glycomp.xlsx")
+save_list_to_excel(glyc_class_list, "glyprot_class.xlsx")
 save_list_to_excel(fuc_count_list, "glyprot_fuc_count.xlsx") # bug with the output of this  
 save_list_to_excel(sia_count_list, "glyprot_sia_count.xlsx") # bug with the output of this 
-#save_list_to_excel(fuc_list, "glyprot_fuc.xlsx")
+save_list_to_excel(fuc_list, "glyprot_fuc.xlsx")
 
 
 #' 
@@ -987,15 +887,6 @@ count_entries_per_df <- function(df_list) {
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 gprot_psm_count <- count_entries_per_df(glycoPSM_list)
 gsite_psm_count <- count_entries_per_df(glycosite_list)
-
-
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-glycoPSMs %>% filter(is.na(gene_name))
-
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-check_df <-  glycosite_list[["P0DOX5_299"]]
 
 
 #' 
@@ -1168,10 +1059,6 @@ sia_count_glycosite_list <- lapply(glycosite_list, count_sia_table)
 #' 
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Load required libraries
-library(dplyr)
-library(ggplot2)
-library(openxlsx2)
 
 # Function to perform analysis on a list of data frames with a filename prefix option
 perform_analysis_on_list <- function(data_list, group_col, value_col, file_prefix = "Analysis_") {
