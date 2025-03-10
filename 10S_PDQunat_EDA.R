@@ -24,16 +24,14 @@ library("viridis")
 library("hrbrthemes")
 library("janitor")
 library(openxlsx2)
-
+library(here)
 library(scales)
+library("EnhancedVolcano")
+library(ggrepel)
 
-#' 
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-setwd("/Users/thomasreilly/Desktop/MRes Data/10S_PD_quant")
+here()
 
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Read as tab-separated file
 Proteins <- read_tsv("10S_MECFS_GPEPS_250125_Proteins.txt")
 ProteinGroups <- read_tsv("10S_MECFS_GPEPS_250125_ProteinGroups.txt")
@@ -45,31 +43,15 @@ PathwayProteinGroups <- read_tsv("10S_MECFS_GPEPS_250125_PathwayProteinGroups.tx
 StudyInformation <- read_tsv("10S_MECFS_GPEPS_250125_StudyInformation.txt")
 ProteinAbundances <- read.csv("10S_MECFS_GPEPS_250125_Proteins_Abundances.csv")
 
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-summary(Proteins)
-
-#' First i Have attempted to do some explortory data analysis of the data by lookings at the data distrubtions of some of the key variables. Many varables show skewed histograms and will need Log transfomation to make their distrubion normal before moving ahead with statisical methods, as many staisical methods assume data normality. 
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 glycoPSMs <- PSMs %>% filter(!is.na(`Glycan Composition`)) # I think i may have forgot pep2D score filtering but it shoul have been done in PD using byonic as a node
 
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 glycoPSMs <- glycoPSMs %>%
   mutate(`Glycan Composition` = str_remove(`Glycan Composition`, "@ N \\| rare1$"))
 
-#' 
-#' 
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Glycans <- glycoPSMs %>%
   group_by(`Glycan Composition`) %>%
@@ -150,12 +132,6 @@ heatmap_plot <- ggplot(ProteinAbundances_top15, aes(x = Sample, y = Protein_Name
   scale_y_discrete(expand = expansion(mult = c(0.05, 0.05)))
 
 ggsave("heatmap.png", plot = heatmap_plot, width = 10, height = 6, dpi = 300)
-
-
-#' 
-## ----display_plot, echo=FALSE, out.width="100%"---------------------------------------------------------------------------------------------------------------------------------------------------
-knitr::include_graphics("Protein_Abundance_Heatmap_Top15.png")
-
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Perform t-tests and extract results
@@ -345,12 +321,6 @@ for (protein in unique(ProteinAbundances_top15$Protein_Names)) {
   print(paste("Saved:", filename))
 }
 
-
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-knitr::include_graphics("Protein_Abundance_Alpha_2_HS_glycoprotein.png")
-
-
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 glycoPSMs <- glycoPSMs %>%
   mutate(
@@ -359,9 +329,6 @@ glycoPSMs <- glycoPSMs %>%
                             ifelse(str_detect(Sample, "M"), "MECFS", NA)),
     Protein_Names = str_extract(`Master Protein Descriptions`, "^[^O]*(?=OS=)")
   )
-
-
-#--------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -420,15 +387,6 @@ ProtAbun_t_test_results <- ProteinAbundances_long %>%
     method  
   )
 
-# Display t-test results in a table
-knitr::kable(
-  ProtAbun_t_test_results,
-  caption = "Protein Abundance T-tests with BH Adjustment",
-  digits = 4,
-  na = 'NA'
-)
-
-
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 DDA_DAPs <- ProtAbun_t_test_results %>% 
@@ -436,17 +394,7 @@ DDA_DAPs <- ProtAbun_t_test_results %>%
 
 write.csv(DIA_DAPs, file = "DDA_DAPs.csv")
 
-knitr::kable(
-  DDA_DAPs,
-  caption = "DDA plasma proteomics - Differentaly Aubundant Proteins",
-  digits = 2,
-  na = 'NA')
 
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  library("EnhancedVolcano")
-
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Create a basic volcano plot
@@ -456,9 +404,8 @@ ggplot(data = ProtAbun_t_test_results, aes(x = Log2_FC, y = `-Log10_p.value`)) +
          geom_point() +
   theme()
 
-#' 
+
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-library(ggrepel)
 
 ProtAbun_t_test_results <- ProtAbun_t_test_results %>%
   filter(!is.na(Log2_FC) & !is.na(p.adjusted))
@@ -489,7 +436,6 @@ knitr::include_graphics("Gprot_volcano.png")
 
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-library(openxlsx2)
 
 
 #' Have done differenial protein aubance analysis of the Charlie's DIA protemics data, as this is more correct dataset to perform analysis on then compared to my own glycoproteomics data set. this is because the glycoproteomics datasets has been biased by glycopeptide enrichment, therefore this may lead to inaccurate quants due to possible greater llels of missing values . the glycoproteomics data set also suffer from being collected by a DDA exmerimental method as this is best for glycoproteoms as the chimeric spectra would lead to signifcant issues for glycan asigments to peptides. hthe DDA method further creates issues of missing values at random due to ticinal featues inherant in the method. 
@@ -505,9 +451,7 @@ DIA_Prot_DiffAb <- DIA_Prot_DiffAb %>%
 DIA_Prot_DiffAb <- DIA_Prot_DiffAb %>%
   mutate(Log2_FC = log2(fc_proteins))
 
-#' 
-#' 
-#' 
+
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 DIA_prot_volcano <- EnhancedVolcano(
   DIA_Prot_DiffAb,
@@ -540,12 +484,7 @@ knitr::kable(
   na = 'NA'
 )
 
-#' 
-## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-#' 
-#' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 DIA_DAPs <- DIA_Prot_DiffAb %>% 
   filter(Log2_FC > 0.5 & pval_proteins < 0.05) 
@@ -707,7 +646,6 @@ glycoPSM_list <- split_by_gene(glycoPSMs, gene_list)
 
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-HP_Gpeps <- glycoPSM_list[["HP"]]
 
 #' 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
