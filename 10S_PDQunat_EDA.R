@@ -5,7 +5,11 @@
 #'
 #' ---
 #' #
-#' The mass spec files of raw data are searched and analysised usising proteome discoverer that byonic as a peptide seach node. this analysis workflow uses a LFQ style quantifcation method using peak intnsities eaven when a sample does not a MS2 PSM corisponding to the peak in staed the peak is stilll quantifed on the basis that a PSM is found that in anouth sample that matches the peak's retention times.
+#' The mass spec files of raw data are searched and analysised using proteome discoverer 
+#' with byonic as a peptide search node. This analysis workflow uses a LFQ style 
+#' quantification method using peak intensities even when a sample does not have an MS2 PSM 
+#' corresponding to the peak. Instead the peak is still quantified based on a PSM found 
+#' in another sample that matches the peak's retention times.
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Get started by loading the packages
 library('tidyr')
@@ -76,7 +80,9 @@ barplot(
 dev.off()  # Save the file
 
 
-#' the following barchart of glycan PSM counts shows the plasma glycome is predominated by a few abundant glycans, thus skew the distrubution of abundances. this what we would expected and is simaly reflected in the released glycan analysis.
+#' The following barchart of glycan PSM counts shows the plasma glycome is predominated 
+#' by a few abundant glycans, thus skewing the distribution of abundances. This is what 
+#' we would expect and is similarly reflected in the released glycan analysis.
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
              ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -244,7 +250,8 @@ dev.off()  # Save the file
                #' @param group_col Column name for grouping (e.g., disease status)
                #' @param value_col Column name for the measurement values to analyze
                #' @param sample_col Column name to use for pivoting to wide format
-               #' @param group_values Vector of expected group values (default: c("Healthy", "MECFS"))
+               #' @param group_values Vector of expected group values 
+               #'        (default: c("Healthy", "MECFS"))
                #' @param min_samples Minimum number of samples required per group (default: 3)
                #' @param file_prefix Prefix for output files (default: "Analysis_")
                #' @param perform_tests List of tests to perform (default: all available)
@@ -1312,9 +1319,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "protein_gly_class"
              )            
-             
+             write.csv(protein_gly_class, file = "output_data/protein_gly_class.csv")
              protein_gly_sia <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "protein_accessions",
@@ -1322,9 +1329,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "protein_gly_sia"
              )            
-             
+             write.csv(protein_gly_sia, file = "output_data/protein_gly_sia.csv")
              protein_gly_fuc <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "protein_accessions",
@@ -1332,9 +1339,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "protein_gly_fuc"
              )       
-             
+             write.csv(protein_gly_fuc, file = "output_data/protein_gly_fuc.csv")
              protein_gly_sia_count <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "protein_accessions",
@@ -1342,9 +1349,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "protein_gly_sia_count"
              )            
-             
+             write.csv(protein_gly_sia_count, file = "output_data/protein_gly_sia_count.csv")
              protein_gly_comp <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "protein_accessions",
@@ -1352,10 +1359,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
-             )            
-             
-             
+               file_prefix = "protein_gly_comp"
+             )                         
+             write.csv(protein_gly_comp, file = "output_data/protein_gly_comp.csv")
              
              glycosite_gly_class <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
@@ -1364,9 +1370,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "glycosite_gly_class"
              )            
-             
+             write.csv(glycosite_gly_class, file = "output_data/glycosite_gly_class.csv")
              glycosite_gly_sia <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "gsite_ID",
@@ -1374,9 +1380,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "glycosite_gly_sia"
              )            
-             
+             write.csv(glycosite_gly_sia, file = "output_data/glycosite_gly_sia.csv")
              glycosite_gly_fuc <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "gsite_ID",
@@ -1384,9 +1390,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "glycosite_gly_fuc"
              )       
-             
+             write.csv(glycosite_gly_fuc, file = "output_data/glycosite_gly_fuc.csv")
              glycosite_gly_sia_count <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "gsite_ID",
@@ -1394,9 +1400,9 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
+               file_prefix = "glycosite_gly_sia_count"
              )            
-             
+             write.csv(glycosite_gly_sia_count, file = "output_data/glycosite_gly_sia_count.csv")
              glycosite_gly_comp <- glyco_matrix(
                gpeps_dataframe = glycoPSMs,
                top_lev_group = "gsite_ID",
@@ -1404,6 +1410,413 @@ relative_abundance <- function(df, protein_list, sample_list, protein_col, sampl
                value_col = "intensity",
                sample_col = "sample",
                group_col = "disease_status",
-               file_prefix = "glycan_class"
-             )            
+               file_prefix = "glycosite_gly_comp"
+             ) 
+             write.csv(glycosite_gly_class, file = "output_data/glycosite_gly_class.csv")           
              
+  #' Log Transform Matrix Data with NA handling
+#' 
+#' @param data_matrix A numeric matrix containing the data to be transformed
+#' @param pseudo_count A small number to add before log transformation to handle zeros (default: 1)
+#' @param base The logarithm base to use (default: 2)
+#' @param replace_inf Whether to replace infinite values with NA (default: TRUE)
+#' @param na_handling Strategy for handling NA values: 
+#'        "keep" (default) - keep NAs as is
+#'        "remove" - remove rows with any NAs
+#'        "impute_min" - replace NAs with minimum non-NA value in dataset
+#'        "impute_zero" - replace NAs with zero before adding pseudo count
+#' @param min_non_na Minimum number of non-NA values required per row to keep row (default: 1)
+#' 
+#' @return A matrix of the same dimensions as input with log-transformed values
+#' 
+log_transform_matrix <- function(data_matrix, 
+                               pseudo_count = 1, 
+                               base = 2,
+                               replace_inf = TRUE,
+                               na_handling = "keep",
+                               min_non_na = 1) {
+  # Input validation
+  if (!is.matrix(data_matrix)) {
+    stop("Input must be a matrix")
+  }
+  
+  # Convert matrix to numeric if it isn't already
+  data_matrix <- matrix(as.numeric(data_matrix), 
+                       nrow = nrow(data_matrix),
+                       dimnames = dimnames(data_matrix))
+  
+  # Handle NA values according to specified strategy
+  if (na_handling == "remove") {
+    # Count non-NA values per row
+    non_na_count <- rowSums(!is.na(data_matrix))
+    # Keep only rows with sufficient non-NA values
+    data_matrix <- data_matrix[non_na_count >= min_non_na, , drop = FALSE]
+    
+  } else if (na_handling == "impute_min") {
+    # Find minimum non-NA value in entire dataset
+    min_value <- min(data_matrix, na.rm = TRUE)
+    # Replace NAs with minimum value
+    data_matrix[is.na(data_matrix)] <- min_value
+    
+  } else if (na_handling == "impute_zero") {
+    # Replace NAs with 0
+    data_matrix[is.na(data_matrix)] <- 0
+    
+  } else if (na_handling != "keep") {
+    warning("Invalid na_handling option. Using 'keep' as default.")
+  }
+  
+  # Add pseudo count to handle zeros
+  transformed_matrix <- data_matrix + pseudo_count
+  
+  # Perform log transformation
+  transformed_matrix <- switch(base,
+    2 = log2(transformed_matrix),
+    10 = log10(transformed_matrix),
+    exp(1) = log(transformed_matrix),
+    log(transformed_matrix, base)
+  )
+  
+  # Replace infinite values with NA if requested
+  if (replace_inf) {
+    transformed_matrix[is.infinite(transformed_matrix)] <- NA
+  }
+  
+  return(transformed_matrix)
+}
+
+# Log transform and write protein matrices to CSV
+protein_gly_comp_log <- log_transform_matrix(protein_gly_comp)
+write.csv(protein_gly_comp_log, file = "output_data/protein_gly_comp_log.csv")
+
+protein_fuc_log <- log_transform_matrix(protein_fuc)
+write.csv(protein_fuc_log, file = "output_data/protein_fuc_log.csv")
+
+protein_sia_log <- log_transform_matrix(protein_sia) 
+write.csv(protein_sia_log, file = "output_data/protein_sia_log.csv")
+
+protein_sia_count_log <- log_transform_matrix(protein_sia_count)
+write.csv(protein_sia_count_log, file = "output_data/protein_sia_count_log.csv")
+
+# Log transform and write glycosite matrices to CSV
+glycosite_gly_comp_log <- log_transform_matrix(glycosite_gly_comp)
+write.csv(glycosite_gly_comp_log, file = "output_data/glycosite_gly_comp_log.csv")
+
+glycosite_fuc_log <- log_transform_matrix(glycosite_fuc)
+write.csv(glycosite_fuc_log, file = "output_data/glycosite_fuc_log.csv")
+
+glycosite_sia_log <- log_transform_matrix(glycosite_sia)
+write.csv(glycosite_sia_log, file = "output_data/glycosite_sia_log.csv")
+
+glycosite_sia_count_log <- log_transform_matrix(glycosite_sia_count)
+write.csv(glycosite_sia_count_log, file = "output_data/glycosite_sia_count_log.csv")
+
+#' Centered Log-Ratio (CLR) Transform Matrix Data
+#' 
+#' @param data_matrix A numeric matrix containing the data to be transformed
+#' @param pseudo_count A small number to add before log transformation to handle zeros (default: 1)
+#' @param base The logarithm base to use (default: 2)
+#' @param na_handling Strategy for handling NA values: 
+#'        "keep" (default) - keep NAs as is
+#'        "remove" - remove rows with any NAs
+#'        "impute_min" - replace NAs with minimum non-NA value in dataset
+#'        "impute_zero" - replace NAs with zero before adding pseudo count
+#' @param min_non_na Minimum number of non-NA values required per row to keep row (default: 1)
+#' 
+#' @return A matrix of the same dimensions as input with CLR-transformed values
+#' 
+clr_transform_matrix <- function(data_matrix,
+                               pseudo_count = 1,
+                               base = 2,
+                               na_handling = "keep",
+                               min_non_na = 1) {
+  
+  # Input validation
+  if (!is.matrix(data_matrix)) {
+    stop("Input must be a matrix")
+  }
+  
+  # Convert matrix to numeric if it isn't already
+  data_matrix <- matrix(as.numeric(data_matrix), 
+                       nrow = nrow(data_matrix),
+                       dimnames = dimnames(data_matrix))
+  
+  # Handle NA values according to specified strategy
+  if (na_handling == "remove") {
+    # Count non-NA values per row
+    non_na_count <- rowSums(!is.na(data_matrix))
+    # Keep only rows with sufficient non-NA values
+    data_matrix <- data_matrix[non_na_count >= min_non_na, , drop = FALSE]
+    
+  } else if (na_handling == "impute_min") {
+    # Find minimum non-NA value in entire dataset
+    min_value <- min(data_matrix, na.rm = TRUE)
+    # Replace NAs with minimum value
+    data_matrix[is.na(data_matrix)] <- min_value
+    
+  } else if (na_handling == "impute_zero") {
+    # Replace NAs with 0
+    data_matrix[is.na(data_matrix)] <- 0
+    
+  } else if (na_handling != "keep") {
+    warning("Invalid na_handling option. Using 'keep' as default.")
+  }
+  
+  # Add pseudo count to handle zeros
+  data_matrix <- data_matrix + pseudo_count
+  
+  # Function to calculate geometric mean, handling NAs
+  geometric_mean <- function(x) {
+    exp(mean(log(x), na.rm = TRUE))
+  }
+  
+  # Initialize matrix for CLR transformed values
+  clr_matrix <- matrix(NA, 
+                      nrow = nrow(data_matrix), 
+                      ncol = ncol(data_matrix),
+                      dimnames = dimnames(data_matrix))
+  
+  # Perform CLR transformation row by row
+  for (i in 1:nrow(data_matrix)) {
+    row_data <- data_matrix[i, ]
+    
+    # Skip rows with all NAs
+    if (all(is.na(row_data))) {
+      next
+    }
+    
+    # Calculate geometric mean for non-NA values
+    geom_mean <- geometric_mean(row_data)
+    
+    # Perform CLR transformation
+    if (base == 2) {
+      clr_matrix[i, ] <- log2(row_data / geom_mean)
+    } else if (base == 10) {
+      clr_matrix[i, ] <- log10(row_data / geom_mean)
+    } else if (base == exp(1)) {
+      clr_matrix[i, ] <- log(row_data / geom_mean)
+    } else {
+      clr_matrix[i, ] <- log(row_data / geom_mean, base)
+    }
+  }
+  
+  return(clr_matrix)
+}
+
+# Using your existing matrices directly:
+protein_gly_comp_clr <- clr_transform_matrix(protein_gly_comp)
+write.csv(protein_gly_comp_clr, file = "output_data/protein_gly_comp_clr.csv")
+glycosite_gly_comp_clr <- clr_transform_matrix(glycosite_gly_comp)
+write.csv(glycosite_gly_comp_clr, file = "output_data/glycosite_gly_comp_clr.csv")
+
+#------------------------------------------------------------------------------------------------
+
+
+#' Analyze CLR-Transformed Data and Create Volcano Plots
+#' 
+#' This function performs statistical analysis on CLR-transformed data, comparing two groups 
+#' (typically Healthy vs ME/CFS) and generates volcano plots to visualize the results.
+#' 
+#' @param clr_matrix A numeric matrix containing CLR-transformed data. Rows represent 
+#'        features and columns represent samples. Column names should start with "HC" 
+#'        for healthy controls or "M" for ME/CFS samples.
+#' @param title Character string for the plot title (default: "Volcano Plot")
+#' @param fc_cutoff Fold change cutoff for significance (default: 0.5)
+#' @param p_cutoff P-value cutoff for significance (default: 0.05)
+#'
+#' @details The function performs the following steps:
+#' \itemize{
+#'   \item Automatically assigns samples to groups based on column name prefixes
+#'   \item Calculates sample counts and verifies minimum group sizes
+#'   \item Computes means for each group
+#'   \item Performs t-tests when sufficient samples are available
+#'   \item Calculates fold changes and adjusts p-values for multiple testing
+#'   \item Generates an enhanced volcano plot
+#' }
+#'
+#' @return A list containing three elements:
+#' \itemize{
+#'   \item results: Data frame with statistical results including:
+#'     \itemize{
+#'       \item Feature: Feature identifiers
+#'       \item P_Value: Raw p-values from t-tests
+#'       \item FDR: False Discovery Rate adjusted p-values
+#'       \item Log2_FC: Log2 fold changes
+#'       \item Mean_Healthy: Mean values for healthy group
+#'       \item Mean_MECFS: Mean values for ME/CFS group
+#'       \item N_Healthy: Number of non-NA samples in healthy group
+#'       \item N_MECFS: Number of non-NA samples in ME/CFS group
+#'     }
+#'   \item plot: ggplot2 object containing the volcano plot
+#'   \item sample_groups: Data frame showing sample to group assignments
+#' }
+#'
+#' @note 
+#' - Requires at least 2 samples per group for statistical analysis
+#' - NA values are handled using na.rm = TRUE in calculations
+#' - P-values are adjusted using Benjamini-Hochberg method
+#'
+#' @examples
+#' \dontrun{
+#' # Create example matrix with proper column names
+#' test_matrix <- matrix(rnorm(100), nrow=10)
+#' colnames(test_matrix) <- c("HC1", "HC2", "HC3", "M1", "M2", "M3")
+#' 
+#' # Run analysis
+#' results <- analyze_clr_data(test_matrix, 
+#'                            title = "Test Analysis",
+#'                            fc_cutoff = 0.5,
+#'                            p_cutoff = 0.05)
+#' 
+#' # View results
+#' head(results$results)
+#' print(results$plot)
+#' }
+#'
+#' @importFrom stats t.test p.adjust
+#' @importFrom EnhancedVolcano EnhancedVolcano
+#'
+#' @export
+analyze_clr_data <- function(clr_matrix, 
+                           title = "Volcano Plot",
+                           fc_cutoff = 0.5,
+                           p_cutoff = 0.05) {
+  
+  # Create sample group mapping based on your column names
+  sample_groups <- data.frame(
+    sample = colnames(clr_matrix),
+    group = ifelse(grepl("^HC", colnames(clr_matrix)), "Healthy",
+                  ifelse(grepl("^M", colnames(clr_matrix)), "MECFS", NA))
+  )
+  
+  # Print sample grouping for verification
+  cat("\nSample Grouping for", title, ":\n")
+  print(sample_groups)
+  
+  # Check for any unassigned samples
+  if(any(is.na(sample_groups$group))) {
+    warning("Some samples could not be assigned to groups: ", 
+            paste(sample_groups$sample[is.na(sample_groups$group)], collapse=", "))
+  }
+  
+  # Verify we have samples in both groups
+  group_counts <- table(sample_groups$group)
+  cat("\nSamples per group:\n")
+  print(group_counts)
+  
+  if(length(group_counts) < 2 || any(group_counts < 2)) {
+    stop("Need at least 2 samples in each group for comparison")
+  }
+  
+  # Initialize results dataframe
+  results <- data.frame(
+    Feature = rownames(clr_matrix),
+    P_Value = NA,
+    FDR = NA,
+    Log2_FC = NA,
+    Mean_Healthy = NA,
+    Mean_MECFS = NA,
+    N_Healthy = NA,
+    N_MECFS = NA,
+    stringsAsFactors = FALSE
+  )
+  
+  # Calculate statistics for each feature
+  for(i in 1:nrow(clr_matrix)) {
+    # Extract data for current feature
+    feature_data <- clr_matrix[i,]
+    
+    # Split data by group
+    mecfs_data <- feature_data[sample_groups$group == "MECFS"]
+    healthy_data <- feature_data[sample_groups$group == "Healthy"]
+    
+    # Store sample counts
+    results$N_Healthy[i] <- sum(!is.na(healthy_data))
+    results$N_MECFS[i] <- sum(!is.na(mecfs_data))
+    
+    # Calculate means
+    results$Mean_Healthy[i] <- mean(healthy_data, na.rm = TRUE)
+    results$Mean_MECFS[i] <- mean(mecfs_data, na.rm = TRUE)
+    
+    # Perform t-test if we have enough samples
+    if(results$N_Healthy[i] >= 3 && results$N_MECFS[i] >= 3) {
+      t_test <- try({
+        t.test(mecfs_data, healthy_data)
+      })
+      
+      if(!inherits(t_test, "try-error")) {
+        results$P_Value[i] <- t_test$p.value
+        results$Log2_FC[i] <- results$Mean_MECFS[i] - results$Mean_Healthy[i]
+      }
+    }
+  }
+  
+  # Calculate FDR
+  results$FDR <- p.adjust(results$P_Value, method = "BH")
+  
+  # Create volcano plot
+  volcano_plot <- EnhancedVolcano(
+    results,
+    lab = results$Feature,
+    x = 'Log2_FC',
+    y = 'FDR',
+    title = title,
+    subtitle = paste0(
+      'CLR-transformed data\n',
+      'Healthy n=', group_counts["Healthy"], 
+      ', ME/CFS n=', group_counts["MECFS"], '\n',
+      'FC cutoff = ', fc_cutoff, 
+      '; p-value cutoff = ', p_cutoff
+    ),
+    pCutoff = p_cutoff,
+    FCcutoff = fc_cutoff,
+    pointSize = 2.0,
+    labSize = 3.0,
+    col = c('grey30', 'forestgreen', 'royalblue', 'red2'),
+    colAlpha = 0.5,
+    legendPosition = 'right',
+    legendLabSize = 10,
+    legendIconSize = 4.0,
+    drawConnectors = TRUE,
+    widthConnectors = 0.5,
+    gridlines.major = FALSE,
+    gridlines.minor = FALSE
+  )
+  
+  # Return both results and plot
+  return(list(
+    results = results,
+    plot = volcano_plot,
+    sample_groups = sample_groups
+  ))
+}
+
+# Function to verify sample names match expected pattern
+verify_sample_names <- function(matrix_list) {
+  for(matrix_name in names(matrix_list)) {
+    cat("\nChecking sample names for", matrix_name, ":\n")
+    sample_names <- colnames(matrix_list[[matrix_name]])
+    
+    # Check if sample names follow expected pattern
+    valid_names <- grepl("^(HC|M)", sample_names)
+    
+    if(!all(valid_names)) {
+      warning("Invalid sample names found in ", matrix_name, ":\n",
+              paste(sample_names[!valid_names], collapse=", "))
+    }
+    
+    # Print sample grouping
+    groups <- data.frame(
+      Sample = sample_names,
+      Group = ifelse(grepl("^HC", sample_names), "Healthy",
+                    ifelse(grepl("^M", sample_names), "MECFS", "Unknown"))
+    )
+    print(groups)
+  }
+}
+
+# Verify sample names before analysis
+verify_sample_names(transformed_results$clr_transformed)
+
+# Run analysis
+results <- process_all_clr_data(transformed_results$clr_transformed)
