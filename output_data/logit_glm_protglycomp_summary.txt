@@ -1,0 +1,20 @@
+Logistic Regression Model Summary
+================================
+
+Model Information:
+Number of features: 247 
+Number of non-zero coefficients: 4 
+Lambda sequence: 100 values
+Optimal lambda: 0.204541 
+Minimum CV error: 1.127471 
+Model accuracy: 1 
+
+Confusion Matrix:
+      Predicted
+Actual 0 1
+     0 5 0
+     1 0 5
+
+Top Features by Absolute Coefficient Size:
+P02675_hexnac(4)hex(4)neuac(1)                    (Intercept)   P01859_hexnac(4)hex(5)fuc(1)         P0DOX5_hexnac(4)hex(4) 
+                     3.3047772                     -1.3351405                     -0.2286731                      0.2184676 
