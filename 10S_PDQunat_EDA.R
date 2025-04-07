@@ -241,8 +241,7 @@ dev.off()  # Save the file
              
                gsites <- find_unique_values(glycoPSMs, "gsite_ID")
                glycoprots <- find_unique_values(glycoPSMs, "protein_accessions")
-               
-       #-----------------------------------------------------------------------------------------------        
+                #-----------------------------------------------------------------------------------------------        
               
                
                #' Perform Statistical Analysis on Multiple Datasets
