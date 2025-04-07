@@ -3,9 +3,13 @@ library(tidyverse)
 library(patchwork)
 
 # Source all function files
-source("R/functions/glycan_analysis_functions.R")
-source("R/functions/plot_functions.R")
-source("R/functions/statistics_functions.R")
+source("functions/data_ingest.R")
+source("functions/count_stats.R")
+source("functions/intensity_stats.R")
+source("functions/ebayes.R")
+source("functions/clustering_models.R")
+source("functions/plot_funtions.R")
+source("functions/pesudo_glycomics.R")
 
 # Main analysis workflow
 main_analysis <- function(glycoPSMs) {
@@ -45,3 +49,15 @@ main_analysis <- function(glycoPSMs) {
 
 # Run the analysis
 results <- main_analysis(glycoPSMs)
+
+# Print summary of all analyses
+cat("\n=== GLYCAN ANALYSIS SUMMARY ===\n")
+cat("All glycan analysis functions have been executed.\n")
+cat("Results have been saved to the output_data directory.\n")
+cat("Check the following files for detailed results:\n")
+cat("- PSM counts by composition and features\n")
+cat("- Relative abundance calculations\n")
+cat("- Chi-square goodness of fit tests\n")
+cat("- Mann-Whitney U tests\n")
+cat("- Ranked glycan compositions and features\n")
+cat("===============================\n")

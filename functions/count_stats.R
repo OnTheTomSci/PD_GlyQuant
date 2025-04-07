@@ -562,3 +562,171 @@ fuc_count_ranked_across_samples <- rank_features_across_samples(
 cat("\nOverall Feature Ranking Across Samples Summary:\n")
 cat("All feature rankings across samples completed and saved to output_data directory.\n")
 
+#' Perform Mann-Whitney U test on relative abundance data frames
+#' @param relative_abundance_df The relative abundance dataframe (output from calculate_relative_abundance)
+#' @param feature_col The column name containing the feature categories (e.g., "contains_Fuc", "glycan_class")
+#' @param output_file The output CSV file path for the test results
+#' @return A dataframe with Mann-Whitney U test results
+perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output_file) {
+  # Validate that the required columns exist
+  required_cols <- c("sample", "disease_status", feature_col, "relative_percentage")
+  missing_cols <- setdiff(required_cols, names(relative_abundance_df))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+  
+  # Get unique feature categories
+  unique_features <- unique(relative_abundance_df[[feature_col]])
+  
+  # Initialize results dataframe
+  results <- data.frame(
+    feature = character(),
+    disease_mean = numeric(),
+    control_mean = numeric(),
+    disease_median = numeric(),
+    control_median = numeric(),
+    u_statistic = numeric(),
+    p_value = numeric(),
+    significant = logical(),
+    effect_size_r = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # For each feature category, perform Mann-Whitney U test
+  for (feature_value in unique_features) {
+    # Filter data for this feature
+    feature_data <- relative_abundance_df %>% 
+      filter(!!rlang::sym(feature_col) == feature_value)
+    
+    # Split data by disease status
+    disease_data <- feature_data %>% filter(disease_status == "Disease")
+    control_data <- feature_data %>% filter(disease_status == "Control")
+    
+    # Skip if there are not enough samples in either group
+    if (nrow(disease_data) < 3 || nrow(control_data) < 3) {
+      warning(paste("Not enough samples for feature", feature_value, 
+                   "(Disease:", nrow(disease_data), 
+                   ", Control:", nrow(control_data), ")"))
+      next
+    }
+    
+    # Calculate means and medians
+    disease_mean <- mean(disease_data$relative_percentage)
+    control_mean <- mean(control_data$relative_percentage)
+    disease_median <- median(disease_data$relative_percentage)
+    control_median <- median(control_data$relative_percentage)
+    
+    # Perform Mann-Whitney U test
+    wilcox_result <- wilcox.test(
+      relative_percentage ~ disease_status, 
+      data = feature_data,
+      exact = FALSE  # Use normal approximation for ties
+    )
+    
+    # Calculate effect size (r)
+    # r = Z / sqrt(N) where Z is the standardized test statistic and N is the total sample size
+    z_stat <- qnorm(wilcox_result$p.value / 2)  # Two-tailed test
+    n_total <- nrow(disease_data) + nrow(control_data)
+    effect_size_r <- abs(z_stat) / sqrt(n_total)
+    
+    # Add results to dataframe
+    results <- rbind(results, data.frame(
+      feature = feature_value,
+      disease_mean = disease_mean,
+      control_mean = control_mean,
+      disease_median = disease_median,
+      control_median = control_median,
+      u_statistic = wilcox_result$statistic,
+      p_value = wilcox_result$p.value,
+      significant = wilcox_result$p.value < 0.05,
+      effect_size_r = effect_size_r,
+      stringsAsFactors = FALSE
+    ))
+  }
+  
+  # Arrange by p-value
+  results <- results %>%
+    arrange(p_value)
+  
+  # Save results
+  write.csv(results, 
+            file = output_file, 
+            row.names = FALSE)
+  
+  # Print summary
+  cat("\nMann-Whitney U Test Summary for", feature_col, ":\n")
+  cat("Total features tested:", nrow(results), "\n")
+  cat("Features with significant difference (p < 0.05):", sum(results$significant), "\n")
+  cat("Percentage of features with significant difference:", 
+      round(sum(results$significant) / nrow(results) * 100, 2), "%\n")
+  
+  # Print top 5 significant features
+  if (sum(results$significant) > 0) {
+    cat("\nTop 5 Significant Features (p < 0.05):\n")
+    top_5 <- results %>% 
+      filter(significant) %>% 
+      arrange(p_value) %>% 
+      head(5)
+    
+    for (i in 1:nrow(top_5)) {
+      cat(i, ". ", top_5$feature[i], 
+          " (p = ", format(top_5$p_value[i], scientific = TRUE, digits = 2), 
+          ", Effect size r = ", round(top_5$effect_size_r[i], 3), 
+          ")\n", sep = "")
+      cat("   Disease: Mean = ", round(top_5$disease_mean[i], 2), 
+          "%, Median = ", round(top_5$disease_median[i], 2), "%\n", sep = "")
+      cat("   Control: Mean = ", round(top_5$control_mean[i], 2), 
+          "%, Median = ", round(top_5$control_median[i], 2), "%\n", sep = "")
+    }
+  }
+  
+  return(results)
+}
+
+# Perform Mann-Whitney U tests for each glycan feature
+# For glycan composition
+composition_mann_whitney <- perform_mann_whitney_test(
+  composition_relative_abundance, 
+  "glycan_composition", 
+  "output_data/mann_whitney_by_composition.csv"
+)
+
+# For fucose presence
+fuc_mann_whitney <- perform_mann_whitney_test(
+  fuc_relative_abundance, 
+  "contains_Fuc", 
+  "output_data/mann_whitney_by_fucose.csv"
+)
+
+# For sialic acid presence
+sia_mann_whitney <- perform_mann_whitney_test(
+  sia_relative_abundance, 
+  "contains_NeuAc", 
+  "output_data/mann_whitney_by_sialic_acid.csv"
+)
+
+# For glycan class
+class_mann_whitney <- perform_mann_whitney_test(
+  class_relative_abundance, 
+  "glycan_class", 
+  "output_data/mann_whitney_by_glycan_class.csv"
+)
+
+# For sialic acid count
+sia_count_mann_whitney <- perform_mann_whitney_test(
+  sia_count_relative_abundance, 
+  "sia_count", 
+  "output_data/mann_whitney_by_sia_count.csv"
+)
+
+# For fucose count
+fuc_count_mann_whitney <- perform_mann_whitney_test(
+  fuc_count_relative_abundance, 
+  "fuc_count", 
+  "output_data/mann_whitney_by_fuc_count.csv"
+)
+
+# Print overall summary
+cat("\nOverall Mann-Whitney U Test Summary:\n")
+cat("All Mann-Whitney U tests completed and saved to output_data directory.\n")
+
