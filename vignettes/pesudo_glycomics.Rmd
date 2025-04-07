@@ -1,0 +1,16 @@
+Pesudeo glycomics is glycomic like analysis from glycoproteomics data. unlike true glycomics data we
+can not get the glycan structural feaures such as where a glycan is core or antenna fucosylation from 
+the glycoproteomics data. therefore we use the glycan composition to represent the glycan profile. 
+one application of pesudo glycomics is to compare the glycan composition to the true glycomics data 
+if it has beencollected to validate glycoproteomics data before further analysis. 
+
+pesudo glycomics can also be used in place tradional glycomics methods such as pgc or 
+permethylated glycomics, in labs where these methods are not available or expertise is in glycomics 
+is limited. thus the pesudo glycomics can serve as a precursor to more detailed glycomics analysis 
+without any need specialised equipment apar from  widley addopted MS/MS proteomics equipment.
+
+
+
+
+
+
