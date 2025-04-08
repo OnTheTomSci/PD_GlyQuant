@@ -62,9 +62,3 @@ m$loadings[1:4, 1:4]
 
 # Open a graphics device (optional, if saving to file)
 png("loadings_plot.png", width = 800, height = 600)
-
-# Random Forest
-library(randomForest)
-set.seed(20)
-rf.fit <- randomForest(disease_status ~ ., data = protein_gly_comp_df)
-print(rf.fit)

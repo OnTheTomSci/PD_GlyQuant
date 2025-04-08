@@ -120,8 +120,8 @@ calculate_relative_abundance <- function(psm_counts_df, feature_col, output_file
   
   # Calculate total PSMs per sample
   sample_totals <- psm_counts_df %>%
-    group_by(sample, disease_status) %>%
-    summarise(
+    dplyr::group_by(sample, disease_status) %>%
+    dplyr::summarise(
       total_psms = sum(psm_count),
       .groups = 'drop'
     )
@@ -129,14 +129,20 @@ calculate_relative_abundance <- function(psm_counts_df, feature_col, output_file
   # Calculate relative abundance percentages
   relative_abundance <- psm_counts_df %>%
     # Join with sample totals
-    left_join(sample_totals, by = c("sample", "disease_status")) %>%
+    dplyr::left_join(sample_totals, by = c("sample", "disease_status")) %>%
     # Calculate relative percentage
-    mutate(
+    dplyr::mutate(
       relative_percentage = (psm_count / total_psms) * 100
-    ) %>%
-    # Select and arrange columns
-    select(sample, disease_status, !!rlang::sym(feature_col), psm_count, total_psms, relative_percentage) %>%
-    arrange(sample, desc(relative_percentage))
+    )
+  
+  # Create a vector of columns to select
+  cols_to_select <- c("sample", "disease_status", feature_col, 
+                      "psm_count", "total_psms", "relative_percentage")
+  
+  # Select and arrange columns
+  relative_abundance <- relative_abundance %>%
+    dplyr::select(dplyr::all_of(cols_to_select)) %>%
+    dplyr::arrange(sample, desc(relative_percentage))
   
   # Save results
   write.csv(relative_abundance, 
@@ -563,8 +569,8 @@ cat("\nOverall Feature Ranking Across Samples Summary:\n")
 cat("All feature rankings across samples completed and saved to output_data directory.\n")
 
 #' Perform Mann-Whitney U test on relative abundance data frames
-#' @param relative_abundance_df The relative abundance dataframe (output from calculate_relative_abundance)
-#' @param feature_col The column name containing the feature categories (e.g., "contains_Fuc", "glycan_class")
+#' @param relative_abundance_df The relative abundance dataframe
+#' @param feature_col The column name containing the feature categories
 #' @param output_file The output CSV file path for the test results
 #' @return A dataframe with Mann-Whitney U test results
 perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output_file) {
@@ -575,16 +581,21 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
     stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
   }
   
+  # Print the unique disease status values to help debug
+  cat("\nUnique disease status values in data:", 
+      paste(unique(relative_abundance_df$disease_status), collapse = ", "), "\n")
+  
   # Get unique feature categories
   unique_features <- unique(relative_abundance_df[[feature_col]])
+  cat("Unique feature values:", paste(unique_features, collapse = ", "), "\n")
   
   # Initialize results dataframe
   results <- data.frame(
     feature = character(),
-    disease_mean = numeric(),
-    control_mean = numeric(),
-    disease_median = numeric(),
-    control_median = numeric(),
+    mecfs_mean = numeric(),
+    healthy_mean = numeric(),
+    mecfs_median = numeric(),
+    healthy_median = numeric(),
     u_statistic = numeric(),
     p_value = numeric(),
     significant = logical(),
@@ -596,25 +607,33 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
   for (feature_value in unique_features) {
     # Filter data for this feature
     feature_data <- relative_abundance_df %>% 
-      filter(!!rlang::sym(feature_col) == feature_value)
+      dplyr::filter(!!rlang::sym(feature_col) == feature_value)
+    
+    # Print sample counts for debugging
+    cat("\nFeature:", feature_value, "\n")
+    cat("Total samples:", nrow(feature_data), "\n")
+    cat("Disease status counts:\n")
+    print(table(feature_data$disease_status))
     
     # Split data by disease status
-    disease_data <- feature_data %>% filter(disease_status == "Disease")
-    control_data <- feature_data %>% filter(disease_status == "Control")
+    mecfs_data <- feature_data %>% 
+      dplyr::filter(disease_status == "MECFS")
+    healthy_data <- feature_data %>% 
+      dplyr::filter(disease_status == "Healthy")
     
     # Skip if there are not enough samples in either group
-    if (nrow(disease_data) < 3 || nrow(control_data) < 3) {
+    if (nrow(mecfs_data) < 3 || nrow(healthy_data) < 3) {
       warning(paste("Not enough samples for feature", feature_value, 
-                   "(Disease:", nrow(disease_data), 
-                   ", Control:", nrow(control_data), ")"))
+                   "(MECFS:", nrow(mecfs_data), 
+                   ", Healthy:", nrow(healthy_data), ")"))
       next
     }
     
     # Calculate means and medians
-    disease_mean <- mean(disease_data$relative_percentage)
-    control_mean <- mean(control_data$relative_percentage)
-    disease_median <- median(disease_data$relative_percentage)
-    control_median <- median(control_data$relative_percentage)
+    mecfs_mean <- mean(mecfs_data$relative_percentage)
+    healthy_mean <- mean(healthy_data$relative_percentage)
+    mecfs_median <- median(mecfs_data$relative_percentage)
+    healthy_median <- median(healthy_data$relative_percentage)
     
     # Perform Mann-Whitney U test
     wilcox_result <- wilcox.test(
@@ -624,18 +643,17 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
     )
     
     # Calculate effect size (r)
-    # r = Z / sqrt(N) where Z is the standardized test statistic and N is the total sample size
-    z_stat <- qnorm(wilcox_result$p.value / 2)  # Two-tailed test
-    n_total <- nrow(disease_data) + nrow(control_data)
+    z_stat <- qnorm(wilcox_result$p.value / 2)
+    n_total <- nrow(mecfs_data) + nrow(healthy_data)
     effect_size_r <- abs(z_stat) / sqrt(n_total)
     
     # Add results to dataframe
     results <- rbind(results, data.frame(
       feature = feature_value,
-      disease_mean = disease_mean,
-      control_mean = control_mean,
-      disease_median = disease_median,
-      control_median = control_median,
+      mecfs_mean = mecfs_mean,
+      healthy_mean = healthy_mean,
+      mecfs_median = mecfs_median,
+      healthy_median = healthy_median,
       u_statistic = wilcox_result$statistic,
       p_value = wilcox_result$p.value,
       significant = wilcox_result$p.value < 0.05,
@@ -646,7 +664,7 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
   
   # Arrange by p-value
   results <- results %>%
-    arrange(p_value)
+    dplyr::arrange(p_value)
   
   # Save results
   write.csv(results, 
@@ -664,8 +682,8 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
   if (sum(results$significant) > 0) {
     cat("\nTop 5 Significant Features (p < 0.05):\n")
     top_5 <- results %>% 
-      filter(significant) %>% 
-      arrange(p_value) %>% 
+      dplyr::filter(significant) %>% 
+      dplyr::arrange(p_value) %>% 
       head(5)
     
     for (i in 1:nrow(top_5)) {
@@ -673,10 +691,10 @@ perform_mann_whitney_test <- function(relative_abundance_df, feature_col, output
           " (p = ", format(top_5$p_value[i], scientific = TRUE, digits = 2), 
           ", Effect size r = ", round(top_5$effect_size_r[i], 3), 
           ")\n", sep = "")
-      cat("   Disease: Mean = ", round(top_5$disease_mean[i], 2), 
-          "%, Median = ", round(top_5$disease_median[i], 2), "%\n", sep = "")
-      cat("   Control: Mean = ", round(top_5$control_mean[i], 2), 
-          "%, Median = ", round(top_5$control_median[i], 2), "%\n", sep = "")
+      cat("   MECFS: Mean = ", round(top_5$mecfs_mean[i], 2), 
+          "%, Median = ", round(top_5$mecfs_median[i], 2), "%\n", sep = "")
+      cat("   Healthy: Mean = ", round(top_5$healthy_mean[i], 2), 
+          "%, Median = ", round(top_5$healthy_median[i], 2), "%\n", sep = "")
     }
   }
   
@@ -729,4 +747,116 @@ fuc_count_mann_whitney <- perform_mann_whitney_test(
 # Print overall summary
 cat("\nOverall Mann-Whitney U Test Summary:\n")
 cat("All Mann-Whitney U tests completed and saved to output_data directory.\n")
+
+#' Create box plots for Mann-Whitney U test results
+#' @param relative_abundance_df The relative abundance dataframe
+#' @param feature_col The column name containing the feature categories
+#' @param output_file The output plot file path (PNG)
+#' @return A ggplot object with the box plots
+plot_mann_whitney_results <- function(relative_abundance_df, feature_col, output_file) {
+  # Load required libraries
+  library(ggplot2)
+  library(viridis)
+  
+  # Validate that the required columns exist
+  required_cols <- c("sample", "disease_status", feature_col, "relative_percentage")
+  missing_cols <- setdiff(required_cols, names(relative_abundance_df))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+  
+  # Create box plot with enhanced aesthetics
+  p <- ggplot(relative_abundance_df, 
+              aes(x = !!sym(feature_col), 
+                  y = relative_percentage, 
+                  fill = disease_status)) +
+    geom_boxplot(outlier.shape = 21, 
+                 outlier.fill = "white",
+                 outlier.alpha = 0.6,
+                 position = position_dodge(width = 0.8),
+                 alpha = 0.7) +
+    geom_point(position = position_jitterdodge(jitter.width = 0.2),
+               alpha = 0.4,
+               size = 1) +
+    scale_fill_viridis(discrete = TRUE, option = "D") +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      legend.position = "top",
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 9),
+      panel.grid.major = element_line(color = "gray90"),
+      panel.grid.minor = element_blank(),
+      plot.margin = unit(c(1, 1, 1, 1), "cm")
+    ) +
+    labs(title = paste("Distribution of", feature_col, "by Disease Status"),
+         x = feature_col,
+         y = "Relative Percentage (%)",
+         fill = "Disease Status")
+  
+  # Save plot as PNG with high resolution
+  ggsave(
+    gsub("\\.pdf$", ".png", output_file), # Replace .pdf with .png
+    p, 
+    width = 10, 
+    height = 8, 
+    dpi = 300,
+    bg = "white"
+  )
+  
+  # Return plot object
+  return(p)
+}
+
+# Create box plots for each feature
+# For glycan composition
+composition_boxplot <- plot_mann_whitney_results(
+  composition_relative_abundance,
+  "glycan_composition",
+  "output_data/boxplots/mann_whitney_composition_boxplot.png"
+)
+
+# For fucose presence
+fuc_boxplot <- plot_mann_whitney_results(
+  fuc_relative_abundance,
+  "contains_Fuc",
+  "output_data/boxplots/mann_whitney_fucose_boxplot.png"
+)
+
+# For sialic acid presence
+sia_boxplot <- plot_mann_whitney_results(
+  sia_relative_abundance,
+  "contains_NeuAc",
+  "output_data/boxplots/mann_whitney_sialic_acid_boxplot.png"
+)
+
+# For glycan class
+class_boxplot <- plot_mann_whitney_results(
+  class_relative_abundance,
+  "glycan_class",
+  "output_data/boxplots/mann_whitney_glycan_class_boxplot.png"
+)
+
+# For sialic acid count
+sia_count_boxplot <- plot_mann_whitney_results(
+  sia_count_relative_abundance,
+  "sia_count",
+  "output_data/boxplots/mann_whitney_sia_count_boxplot.png"
+)
+
+# For fucose count
+fuc_count_boxplot <- plot_mann_whitney_results(
+  fuc_count_relative_abundance,
+  "fuc_count",
+  "output_data/boxplots/mann_whitney_fuc_count_boxplot.png"
+)
+
+# Print summary
+cat("\nBox Plot Summary:\n")
+cat("All box plots have been saved to output_data/boxplots/\n")
+cat("Plots show the distribution of relative percentages for each feature,\n")
+cat("split by disease status (MECFS vs. Healthy)\n")
 
