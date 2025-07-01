@@ -1,0 +1,21 @@
+"sample","disease_status","fuc_count","psm_count"
+"HC13","Healthy","Fucose 0",2733
+"HC13","Healthy","Fucose 1",1374
+"HC14","Healthy","Fucose 0",2248
+"HC14","Healthy","Fucose 1",918
+"HC20","Healthy","Fucose 0",2904
+"HC20","Healthy","Fucose 1",1515
+"HC22","Healthy","Fucose 0",2461
+"HC22","Healthy","Fucose 1",1128
+"HC25","Healthy","Fucose 0",2443
+"HC25","Healthy","Fucose 1",1078
+"M1","MECFS","Fucose 0",2879
+"M1","MECFS","Fucose 1",1576
+"M10","MECFS","Fucose 0",3115
+"M10","MECFS","Fucose 1",1242
+"M11","MECFS","Fucose 0",2908
+"M11","MECFS","Fucose 1",1195
+"M12","MECFS","Fucose 0",2289
+"M12","MECFS","Fucose 1",936
+"M15","MECFS","Fucose 0",2971
+"M15","MECFS","Fucose 1",1247

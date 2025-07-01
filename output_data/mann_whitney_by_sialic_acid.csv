@@ -1,0 +1,3 @@
+"feature","mecfs_mean","healthy_mean","mecfs_median","healthy_median","u_statistic","p_value","significant","effect_size_r"
+TRUE,74.2663221458703,74.511042329497,75.0426517182549,74.672610755085,12,1,FALSE,0
+FALSE,25.7336778541297,25.488957670503,24.9573482817451,25.327389244915,13,1,FALSE,0
