@@ -32,7 +32,7 @@ library(here)
 library(scales)
 library("EnhancedVolcano")
 library(ggrepel)
-library(ggpubr)  # Add this at the top of your script
+library(ggpubr)  
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 here()
