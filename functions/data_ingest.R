@@ -15,8 +15,6 @@ StudyInformation <- read_tsv("input_data/10S_MECFS_GPEPS_250125_StudyInformation
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 glycoPSMs <- PSMs %>% filter(!is.na(`Glycan Composition`)) # I think i may have forgot pep2D score filtering but it shoul have been done in PD using byonic as a node
-glycoPSMs <- glycoPSMs %>% 
-  filter(pep2d_score < 0.001)
 
 ## -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 glycoPSMs <- glycoPSMs %>%
@@ -102,3 +100,4 @@ glycoPSMs <- glycoPSMs %>%
                
                return(input_df)
              }
+             

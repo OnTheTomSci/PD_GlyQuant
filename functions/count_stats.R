@@ -1,4 +1,192 @@
+library(tidyverse)
+library(here)
+library(janitor)
+library(stringr)
+library(readr)
 library(dplyr)
+
+PSMs <- read_tsv("input_data/10S_MECFS_GPEPS_250125_PSMs.txt")
+PSMs <- PSMs %>%
+  clean_names(case = "snake") %>%
+    mutate(
+        pep_glycosite = str_extract(modifications, "(?<=\\[N)\\d+(?=\\])"),
+        protein_names = str_extract(master_protein_descriptions, "^[^O]+(?= OS=)"),
+        gene_name = str_extract(master_protein_descriptions, "(?<=GN=)[^\\s]+(?= PE=)"),
+        contains_Fuc = str_detect(glycan_composition, "Fuc"),
+        contains_NeuAc = str_detect(glycan_composition, "NeuAc"),
+        pep_glycosite = as.numeric(pep_glycosite),
+        glycan_composition = str_remove(glycan_composition, "@ n \\| rare1$"),
+        protein_glycosite = position_in_protein + pep_glycosite - 1
+               )
+
+PSMs <- PSMs %>%
+               mutate(
+                 Sample = str_extract(
+                   spectrum_file,
+                   "(?<=20250116_OE_TR_10S_MECFS_GPEP_)(.*?)(?=\\.raw)"
+                 ),
+                 Disease_Status = ifelse(
+                   str_detect(Sample, "^HC"),
+                   "Healthy",
+                   ifelse(str_detect(Sample, "M"), "MECFS", NA)
+                 ),
+                 Protein_Names = str_extract(master_protein_descriptions, "^[^O]*(?=OS=)")
+               )
+PSMs <- PSMs %>% filter(pep_2d < 0.001)
+             
+# Count PSMs per sample
+psm_per_sample <- PSMs %>%
+  group_by(Sample) %>%
+  summarise(
+    psm_count = n(),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(psm_count))
+
+# Calculate summary statistics
+psm_stats <- psm_per_sample %>%
+  summarise(
+    mean_psms = mean(psm_count),
+    sd_psms = sd(psm_count),
+    min_psms = min(psm_count),
+    max_psms = max(psm_count)
+  )
+# Print PSM statistics
+print(psm_stats)
+
+
+# Create bar plot
+psm_plot <- ggplot(psm_per_sample, aes(x = Sample, y = psm_count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Number of PSMs per Sample",
+    x = "Sample",
+    y = "PSM Count"
+  )
+
+# Save plot
+ggsave("figures/PSM_counts/psm_counts_per_sample.png", 
+       psm_plot,
+       width = 10, 
+       height = 6,
+       dpi = 300)
+
+# Print summary statistics
+cat("\nPSM Count Summary:\n")
+cat("Mean PSMs per sample:", round(psm_stats$mean_psms, 1), "\n")
+cat("Standard deviation:", round(psm_stats$sd_psms, 1), "\n")
+cat("Min PSMs:", psm_stats$min_psms, "\n")
+cat("Max PSMs:", psm_stats$max_psms, "\n")
+
+# Save summary statistics
+write.csv(psm_per_sample, 
+          file = "output_data/PSM_counts/psm_counts_per_sample.csv",
+          row.names = FALSE)
+
+# filter for glycoPSMs
+ glycoPSMs <- PSMs %>% filter(!is.na(glycan_composition))
+
+# Count glycoPSMs per sample
+glyco_psm_per_sample <- glycoPSMs %>%
+  group_by(Sample, Disease_Status) %>%
+  summarise(
+    glyco_psm_count = n(),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(glyco_psm_count))
+
+# Calculate summary statistics
+glyco_psm_stats <- glyco_psm_per_sample %>%
+  summarise(
+    mean_glyco_psms = mean(glyco_psm_count),
+    sd_glyco_psms = sd(glyco_psm_count),
+    min_glyco_psms = min(glyco_psm_count),
+    max_glyco_psms = max(glyco_psm_count)
+  )
+
+# Create bar plot
+glyco_psm_plot <- ggplot(glyco_psm_per_sample, aes(x = Sample, y = glyco_psm_count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Number of Glyco-PSMs per Sample", 
+    x = "Sample",
+    y = "Glyco-PSM Count"
+  )
+
+# Save plot
+ggsave("figures/PSM_counts/glyco_psm_counts_per_sample.png", 
+       glyco_psm_plot,
+       width = 10, 
+       height = 6,
+       dpi = 300)
+
+# Print summary statistics
+cat("\nGlyco-PSM Count Summary:\n")
+cat("Mean Glyco-PSMs per sample:", round(glyco_psm_stats$mean_glyco_psms, 1), "\n")
+cat("Standard deviation:", round(glyco_psm_stats$sd_glyco_psms, 1), "\n")
+cat("Min Glyco-PSMs:", glyco_psm_stats$min_glyco_psms, "\n")
+cat("Max Glyco-PSMs:", glyco_psm_stats$max_glyco_psms, "\n")
+
+# Save summary statistics
+write.csv(glyco_psm_per_sample, 
+          file = "output_data/PSM_counts/glyco_psm_counts_per_sample.csv",
+          row.names = FALSE)
+
+# Calculate glycoPSM enrichment percentage per sample
+glyco_enrichment <- PSMs %>%
+  group_by(Sample, Disease_Status) %>%
+  summarise(
+    total_psms = n(),
+    glyco_psms = sum(!is.na(glycan_composition)),
+    enrichment_percent = (glyco_psms / total_psms) * 100,
+    .groups = 'drop'
+  )
+
+# Calculate summary statistics for enrichment
+enrichment_stats <- glyco_enrichment %>%
+  summarise(
+    mean_enrichment = mean(enrichment_percent),
+    sd_enrichment = sd(enrichment_percent),
+    min_enrichment = min(enrichment_percent),
+    max_enrichment = max(enrichment_percent)
+  )
+
+# Create enrichment plot
+enrichment_plot <- ggplot(glyco_enrichment, aes(x = Sample, y = enrichment_percent)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Glyco-PSM Enrichment by Sample",
+    x = "Sample",
+    y = "Enrichment (%)"
+  )
+
+# Save enrichment plot
+ggsave("figures/PSM_counts/glyco_psm_enrichment_per_sample.png",
+       enrichment_plot,
+       width = 10,
+       height = 6,
+       dpi = 300)
+
+# Print enrichment summary statistics
+cat("\nGlyco-PSM Enrichment Summary:\n")
+cat("Mean enrichment:", round(enrichment_stats$mean_enrichment, 2), "%\n")
+cat("Standard deviation:", round(enrichment_stats$sd_enrichment, 2), "%\n")
+cat("Min enrichment:", round(enrichment_stats$min_enrichment, 2), "%\n")
+cat("Max enrichment:", round(enrichment_stats$max_enrichment, 2), "%\n")
+
+# Save enrichment statistics
+write.csv(glyco_enrichment,
+          file = "output_data/PSM_counts/glyco_psm_enrichment_per_sample.csv",
+          row.names = FALSE)
+
+
+
 
 #' Count PSMs by glycan composition grouped by sample
 #' @param data The glycoPSMs dataframe
@@ -73,17 +261,6 @@ write.csv(class_psm_counts,
           file = "output_data/psm_counts_by_glycan_class.csv", 
           row.names = FALSE)
 
-# Count PSMs by sialic acid count
-sia_count_psm_counts <- count_psms_by_feature(glycoPSMs, "sia_count")
-write.csv(sia_count_psm_counts, 
-          file = "output_data/psm_counts_by_sia_count.csv", 
-          row.names = FALSE)
-
-# Count PSMs by fucose count
-fuc_count_psm_counts <- count_psms_by_feature(glycoPSMs, "fuc_count")
-write.csv(fuc_count_psm_counts, 
-          file = "output_data/psm_counts_by_fuc_count.csv", 
-          row.names = FALSE)
 
 # Print summary for each feature
 cat("\nPSM Count Summary by Fucose Presence:\n")
@@ -186,33 +363,23 @@ class_relative_abundance <- calculate_relative_abundance(
   "output_data/relative_abundance_by_glycan_class.csv"
 )
 
-# For sialic acid count
-sia_count_relative_abundance <- calculate_relative_abundance(
-  sia_count_psm_counts, 
-  "sia_count", 
-  "output_data/relative_abundance_by_sia_count.csv"
-)
-
-# For fucose count
-fuc_count_relative_abundance <- calculate_relative_abundance(
-  fuc_count_psm_counts, 
-  "fuc_count", 
-  "output_data/relative_abundance_by_fuc_count.csv"
-)
-
 # Print overall summary
 cat("\nOverall Relative Abundance Summary:\n")
 cat("All relative abundance calculations completed and saved to output_data directory.\n")
 
+
+
+
+
+
+
+
+
+
+
+
+
 # check for normality of the data 
-
-
-
-
-
-
-
-
 
 #' Perform chi-square goodness of fit test on glycan feature PSM count data
 #' @param psm_counts_df The PSM counts dataframe (output from count_psms_by_feature or count_psms_by_composition)
@@ -550,19 +717,6 @@ class_ranked_across_samples <- rank_features_across_samples(
   "output_data/ranked_glycan_class_across_samples.csv"
 )
 
-# For sialic acid count
-sia_count_ranked_across_samples <- rank_features_across_samples(
-  sia_count_relative_abundance, 
-  "sia_count", 
-  "output_data/ranked_sia_count_across_samples.csv"
-)
-
-# For fucose count
-fuc_count_ranked_across_samples <- rank_features_across_samples(
-  fuc_count_relative_abundance, 
-  "fuc_count", 
-  "output_data/ranked_fuc_count_across_samples.csv"
-)
 
 # Print overall summary
 cat("\nOverall Feature Ranking Across Samples Summary:\n")
@@ -730,19 +884,6 @@ class_mann_whitney <- perform_mann_whitney_test(
   "output_data/mann_whitney_by_glycan_class.csv"
 )
 
-# For sialic acid count
-sia_count_mann_whitney <- perform_mann_whitney_test(
-  sia_count_relative_abundance, 
-  "sia_count", 
-  "output_data/mann_whitney_by_sia_count.csv"
-)
-
-# For fucose count
-fuc_count_mann_whitney <- perform_mann_whitney_test(
-  fuc_count_relative_abundance, 
-  "fuc_count", 
-  "output_data/mann_whitney_by_fuc_count.csv"
-)
 
 # Print overall summary
 cat("\nOverall Mann-Whitney U Test Summary:\n")
@@ -860,253 +1001,3 @@ cat("All box plots have been saved to output_data/boxplots/\n")
 cat("Plots show the distribution of relative percentages for each feature,\n")
 cat("split by disease status (MECFS vs. Healthy)\n")
 
-// ... existing code ...
-
-#' Analyze fucosylation relative abundance with comprehensive statistical testing
-#' @param relative_abundance_df The relative abundance dataframe
-#' @param feature_col The column name containing the feature categories (e.g., "contains_Fuc", "fuc_count")
-#' @param output_file The output CSV file path for statistical results
-#' @param plot_file The output plot file path for the visualization
-#' @return A list containing statistical results and plot
-analyze_fucosylation_abundance <- function(relative_abundance_df, 
-                                          feature_col, 
-                                          output_file, 
-                                          plot_file) {
-  # Load required libraries
-  library(ggplot2)
-  library(viridis)
-  library(dplyr)
-  library(stats)
-  
-  # Validate that the required columns exist
-  required_cols <- c("sample", "disease_status", feature_col, "relative_percentage")
-  missing_cols <- setdiff(required_cols, names(relative_abundance_df))
-  if (length(missing_cols) > 0) {
-    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
-  }
-  
-  # Get unique feature categories
-  unique_features <- unique(relative_abundance_df[[feature_col]])
-  
-  # Initialize results dataframe
-  results <- data.frame(
-    feature = character(),
-    healthy_n = numeric(),
-    mecfs_n = numeric(),
-    healthy_mean = numeric(),
-    mecfs_mean = numeric(),
-    healthy_median = numeric(),
-    mecfs_median = numeric(),
-    healthy_sd = numeric(),
-    mecfs_sd = numeric(),
-    normality_test_p = numeric(),
-    is_normal = logical(),
-    test_used = character(),
-    test_statistic = numeric(),
-    p_value = numeric(),
-    fdr_p_value = numeric(),
-    significant = logical(),
-    effect_size = numeric(),
-    stringsAsFactors = FALSE
-  )
-  
-  # For each feature category, perform analysis
-  for (feature_value in unique_features) {
-    # Filter data for this feature
-    feature_data <- relative_abundance_df %>% 
-      dplyr::filter(!!rlang::sym(feature_col) == feature_value)
-    
-    # Split data by disease status
-    healthy_data <- feature_data %>% 
-      dplyr::filter(disease_status == "Healthy") %>%
-      dplyr::pull(relative_percentage)
-    
-    mecfs_data <- feature_data %>% 
-      dplyr::filter(disease_status == "MECFS") %>%
-      dplyr::pull(relative_percentage)
-    
-    # Check if we have enough samples
-    if (length(healthy_data) < 3 || length(mecfs_data) < 3) {
-      warning(paste("Not enough samples for feature", feature_value, 
-                   "(Healthy:", length(healthy_data), 
-                   ", MECFS:", length(mecfs_data), ")"))
-      next
-    }
-    
-    # Calculate descriptive statistics
-    healthy_mean <- mean(healthy_data, na.rm = TRUE)
-    mecfs_mean <- mean(mecfs_data, na.rm = TRUE)
-    healthy_median <- median(healthy_data, na.rm = TRUE)
-    mecfs_median <- median(mecfs_data, na.rm = TRUE)
-    healthy_sd <- sd(healthy_data, na.rm = TRUE)
-    mecfs_sd <- sd(mecfs_data, na.rm = TRUE)
-    
-    # Perform Shapiro-Wilk test for normality on combined data
-    combined_data <- c(healthy_data, mecfs_data)
-    normality_test <- shapiro.test(combined_data)
-    is_normal <- normality_test$p.value > 0.05
-    
-    # Perform appropriate statistical test
-    if (is_normal) {
-      # Use t-test for normally distributed data
-      test_result <- t.test(mecfs_data, healthy_data, var.equal = FALSE)
-      test_used <- "Welch's t-test"
-      test_statistic <- test_result$statistic
-      p_value <- test_result$p.value
-      effect_size <- abs(mecfs_mean - healthy_mean) / sqrt((healthy_sd^2 + mecfs_sd^2) / 2)
-    } else {
-      # Use Wilcoxon test for non-normally distributed data
-      test_result <- wilcox.test(mecfs_data, healthy_data, exact = FALSE)
-      test_used <- "Wilcoxon rank-sum test"
-      test_statistic <- test_result$statistic
-      p_value <- test_result$p.value
-      # Calculate effect size for non-parametric test
-      z_stat <- qnorm(p_value / 2)
-      n_total <- length(healthy_data) + length(mecfs_data)
-      effect_size <- abs(z_stat) / sqrt(n_total)
-    }
-    
-    # Add results to dataframe
-    results <- rbind(results, data.frame(
-      feature = feature_value,
-      healthy_n = length(healthy_data),
-      mecfs_n = length(mecfs_data),
-      healthy_mean = healthy_mean,
-      mecfs_mean = mecfs_mean,
-      healthy_median = healthy_median,
-      mecfs_median = mecfs_median,
-      healthy_sd = healthy_sd,
-      mecfs_sd = mecfs_sd,
-      normality_test_p = normality_test$p.value,
-      is_normal = is_normal,
-      test_used = test_used,
-      test_statistic = test_statistic,
-      p_value = p_value,
-      fdr_p_value = NA,  # Will be calculated later
-      significant = p_value < 0.05,
-      effect_size = effect_size,
-      stringsAsFactors = FALSE
-    ))
-  }
-  
-  # Calculate FDR (Benjamini-Hochberg correction)
-  if (nrow(results) > 0) {
-    results$fdr_p_value <- p.adjust(results$p_value, method = "BH")
-    results$significant_fdr <- results$fdr_p_value < 0.05
-  }
-  
-  # Arrange by p-value
-  results <- results %>%
-    dplyr::arrange(p_value)
-  
-  # Save results
-  write.csv(results, 
-            file = output_file, 
-            row.names = FALSE)
-  
-  # Create visualization
-  if (nrow(results) > 0) {
-    # Prepare data for plotting
-    plot_data <- relative_abundance_df %>%
-      dplyr::filter(!!rlang::sym(feature_col) %in% results$feature[1:min(10, nrow(results))]) %>%
-      dplyr::mutate(feature_label = paste0(!!rlang::sym(feature_col), 
-                                          "\np = ", format(results$p_value[match(!!rlang::sym(feature_col), results$feature)], 
-                                                          scientific = TRUE, digits = 2)))
-    
-    # Create box plot with statistical annotations
-    p <- ggplot(plot_data, 
-                aes(x = feature_label, 
-                    y = relative_percentage, 
-                    fill = disease_status)) +
-      geom_boxplot(outlier.shape = 21, 
-                   outlier.fill = "white",
-                   outlier.alpha = 0.6,
-                   position = position_dodge(width = 0.8),
-                   alpha = 0.7) +
-      geom_point(position = position_jitterdodge(jitter.width = 0.2),
-                 alpha = 0.4,
-                 size = 1) +
-      scale_fill_viridis(discrete = TRUE, option = "D") +
-      theme_minimal() +
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-        axis.text.y = element_text(size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-        legend.position = "top",
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 9),
-        panel.grid.major = element_line(color = "gray90"),
-        panel.grid.minor = element_blank(),
-        plot.margin = unit(c(1, 1, 1, 1), "cm")
-      ) +
-      labs(title = paste("Fucosylation Relative Abundance Analysis:", feature_col),
-           x = "Feature (with p-value)",
-           y = "Relative Percentage (%)",
-           fill = "Disease Status")
-    
-    # Save plot
-    ggsave(plot_file, 
-           p, 
-           width = 12, 
-           height = 8, 
-           dpi = 300,
-           bg = "white")
-  }
-  
-  # Print summary
-  cat("\nFucosylation Analysis Summary for", feature_col, ":\n")
-  cat("Total features analyzed:", nrow(results), "\n")
-  cat("Features with normal distribution:", sum(results$is_normal), "\n")
-  cat("Features with significant difference (p < 0.05):", sum(results$significant), "\n")
-  cat("Features with significant difference (FDR < 0.05):", sum(results$significant_fdr), "\n")
-  
-  # Print top 5 significant features
-  if (sum(results$significant) > 0) {
-    cat("\nTop 5 Significant Features (p < 0.05):\n")
-    top_5 <- results %>% 
-      dplyr::filter(significant) %>% 
-      dplyr::arrange(p_value) %>% 
-      head(5)
-    
-    for (i in 1:nrow(top_5)) {
-      cat(i, ". ", top_5$feature[i], 
-          " (", top_5$test_used[i],
-          ", p = ", format(top_5$p_value[i], scientific = TRUE, digits = 2),
-          ", FDR = ", format(top_5$fdr_p_value[i], scientific = TRUE, digits = 2),
-          ")\n", sep = "")
-      cat("   Healthy: n = ", top_5$healthy_n[i], 
-          ", Mean = ", round(top_5$healthy_mean[i], 2), 
-          "%, SD = ", round(top_5$healthy_sd[i], 2), "%\n", sep = "")
-      cat("   MECFS: n = ", top_5$mecfs_n[i], 
-          ", Mean = ", round(top_5$mecfs_mean[i], 2), 
-          "%, SD = ", round(top_5$mecfs_sd[i], 2), "%\n", sep = "")
-    }
-  }
-  
-  return(list(results = results, plot = p))
-}
-
-# Example usage for fucose presence
-fucose_analysis <- analyze_fucosylation_abundance(
-  fuc_relative_abundance,
-  "contains_Fuc",
-  "output_data/fucose_analysis_results.csv",
-  "output_data/boxplots/fucose_analysis_plot.png"
-)
-setwd("/Users/thomasreilly/Desktop/PD_GlyQuant")
-glycosite_gly_fuc_RA <- read.csv("output_data/glycosite/RA/glycosite_gly_fuc_RA.csv")
-glycosite_gly_fuc_RA_wide <- pivot_wider(glycosite_gly_fuc_RA, id_cols = "glycosite_id", names_from = "sample")
-
-## Example usage for fucose count
-fucose_count_analysis <- analyze_fucosylation_abundance(
-  glycosite_gly_fuc_RA,
-  "fuc_intensity",
-  "output_data/glycosite_fucose_analysis_results.csv",
-  "output_data/boxplots/glycosite_fucose_analysis_plot.png"
-)
-# Print overall summary
-cat("\nFucosylation Analysis Summary:\n")
-cat("Comprehensive fucosylation analysis completed with normality testing,\n")
-cat("appropriate statistical tests, and Benjamini-Hochberg correction.\n")
-cat("Results saved to output_data directory.\n")
