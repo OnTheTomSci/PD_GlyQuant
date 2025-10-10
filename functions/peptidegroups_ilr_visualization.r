@@ -425,7 +425,7 @@ create_ilr_results_table <- function(ilr_results, output_file = NULL) {
           n_samples = result$transformation_info$n_samples
         ) %>%
         select(protein, ilr_coordinate, n_compositions, n_samples,
-               mean_healthy, mean_mecfs, difference, 
+               healthy_mean, mecfs_mean, difference, 
                t_statistic, p_value, p_value_adj, significant, ci_lower, ci_upper)
     } else {
       NULL

@@ -67,6 +67,20 @@ load_and_preprocess_peptidegroups <- function(study_info_path = "input_data/10S_
     mutate(sample = str_remove(sample, "^([^_]*_){4}")) %>%
     mutate(sample = str_remove(sample, "_[^_]*$"))
   
+  # Add group information by joining with StudyInformation
+  # Extract sample names from sample_identifier (e.g., "20250116_OE_TR_10S_MECFS_GPEP_HC13" -> "HC13")
+  sample_group_mapping <- StudyInformation %>%
+    mutate(
+      sample_extracted = str_extract(sample_identifier, "(HC\\d+|M\\d+)$") %>%
+        str_to_lower()  # Convert to lowercase to match glyco_long sample names
+    ) %>%
+    select(sample_extracted, sample_group) %>%
+    rename(sample = sample_extracted, group = sample_group)
+  
+  # Join group information
+  glyco_peptide_groups_long <- glyco_peptide_groups_long %>%
+    left_join(sample_group_mapping, by = "sample")
+  
   # Calculate basic statistics
   all_samples <- unique(glyco_peptide_groups_long$sample)
   total_samples <- length(all_samples)
