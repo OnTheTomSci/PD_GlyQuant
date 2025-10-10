@@ -7,7 +7,7 @@ library(patchwork)  # For combining plots
 # Load required modules
 source("functions/peptidegroups_preprocessing.R")
 source("functions/peptidegroups_compositional_analysis.R")
-source("functions/peptidegroups_ilr_visualization.R")
+source("functions/peptidegroups_ilr_visualization.r")
 
 cat("================================================================================\n")
 cat("  ILR RESULTS VISUALIZATION EXAMPLES\n")
@@ -23,7 +23,7 @@ cat("Step 1: Loading or generating ILR results...\n\n")
 # (The analyze_multiple_proteins_ilr function returns results in memory)
 # For this example, we'll run a quick analysis
 
-data <- load_and_preprocess_peptidegroups("input_data")
+data <- load_and_preprocess_peptidegroups()
 glyco_long <- data$glyco_peptide_groups_long
 
 # Find proteins with multiple compositions
