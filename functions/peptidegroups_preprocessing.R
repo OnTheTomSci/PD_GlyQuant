@@ -32,10 +32,12 @@ load_and_preprocess_peptidegroups <- function(study_info_path = "input_data/10S_
       pep_glycosite = str_extract(modifications, "(?<=\\[N)\\d+(?=\\])"),
       protein_names = str_extract(master_protein_descriptions, "^[^O]+(?= OS=)"),
       gene_name = str_extract(master_protein_descriptions, "(?<=GN=)[^\\s]+(?= PE=)"),
+      # Clean glycan composition - remove all variations of "@ N | rare1" and "....N...rare1" annotations
+      glycan_composition = str_remove(glycan_composition, "\\s*(@|\\.)\\s*[Nn]\\s*(\\||\\.)\\s*rare1(\\s*\\[N\\d+\\])?\\s*$"),
       contains_Fuc = str_detect(glycan_composition, "Fuc"),
       contains_NeuAc = str_detect(glycan_composition, "NeuAc"),
       pep_glycosite = as.numeric(pep_glycosite),
-      glycan_composition = str_remove(glycan_composition, "@ n \\| rare1$"),
+      protein_accessions = master_protein_accessions,
       protein_glycosite = position_in_protein + pep_glycosite - 1
     )
   
