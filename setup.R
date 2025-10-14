@@ -11,7 +11,11 @@ required_packages <- c(
   "tidyr",          # For data tidying
   "stringr",        # For string manipulation
   "forcats",        # For factor manipulation
-  "stats"           # For statistical tests (usually included in base R)
+  "stats",          # For statistical tests (usually included in base R)
+  "effectsize",     # For Cohen's d and other effect size calculations
+  "effsize",        # For Hedges' g and other effect size calculations
+  "broom",          # For tidying statistical test results
+  "janitor"         # For data cleaning functions
 )
 
 # Function to install missing packages
