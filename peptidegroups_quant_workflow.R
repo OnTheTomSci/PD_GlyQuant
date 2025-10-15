@@ -51,16 +51,6 @@ StudyInformation <- preprocessed_data$StudyInformation
 glycan_class_map <- preprocessed_data$glycan_class_map
 sample_metadata <- preprocessed_data$sample_metadata
 
-# Add group classification if not already present
-if (!"group" %in% colnames(glyco_peptide_groups_long)) {
-  glyco_peptide_groups_long <- glyco_peptide_groups_long %>%
-    mutate(group = case_when(
-      str_starts(sample, "hc") ~ "Healthy",
-      str_starts(sample, "m") ~ "MECFS",
-      TRUE ~ "Unknown"
-    ))
-}
-
 cat("✓ Data loading and preprocessing completed\n\n")
 
 # =============================================================================

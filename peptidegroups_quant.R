@@ -29,6 +29,7 @@ PeptideGroups <- PeptideGroups %>%
         protein_glycosite = position_in_protein + pep_glycosite - 1
                )
 
+
 glyco_peptide_groups <- PeptideGroups %>% filter(!is.na(glycan_composition))
 glyco_peptide_groups <- glyco_peptide_groups %>% filter(pep_2d_by_search_engine_a2_pmi_byonic < 0.001)
 
@@ -91,20 +92,14 @@ glycopeptides <- find_unique_values(glyco_peptide_groups, "peptide_groups_peptid
 glycopeptide_count <- length(glycopeptides)
 cat("Number of unique glycopeptides:", glycopeptide_count, "\n")
 
-# Find common glycopeptides across all samples
-common_glycopeptides <- glyco_peptide_groups_long %>%
-  group_by(peptide_groups_peptide_group_id) %>%
-  summarise(
-    num_samples = n_distinct(sample),
-    .groups = 'drop'
-  ) %>%
-  filter(num_samples == total_samples) %>%
-  pull(peptide_groups_peptide_group_id)
-
-# Count common glycopeptides
-common_glycopeptide_count <- length(common_glycopeptides)
-cat("Number of glycopeptides common across all samples:", common_glycopeptide_count, "\n")
- 
+#common_glycopeptides <- glyco_peptide_groups %>%
+ # group_by(peptide_groups_peptide_group_id) %>%
+  #summarise(
+   # num_samples = n_distinct(sample),
+    #.groups = 'drop'
+  #) %>%
+  #filter(num_samples == length(unique(StudyInformation$sample_name))) %>%
+  #pull(peptide_groups_peptide_group_id)
 
 # Pivot longer by abundance columns
 glyco_peptide_groups_long <- glyco_peptide_groups %>%
@@ -114,7 +109,40 @@ glyco_peptide_groups_long <- glyco_peptide_groups %>%
     names_to = "sample",
     values_to = "abundance"
   ) %>%
-  filter(!is.na(abundance))
+  filter(!is.na(abundance)) %>%
+  # Clean sample names: remove prefix parts and suffix
+  # Example: "abundance_f1_sample_20250116_oe_tr_10s_mecfs_gpep_hc13" -> "hc13"
+  mutate(sample = str_remove(sample, "^([^_]*_){4}")) %>%  # Remove first 4 parts (e.g., "abundance_f1_sample_20250116_")
+  mutate(sample = str_remove(sample, "_[^_]*$"))  # Remove last part after underscore
+
+ # Add group information by joining with StudyInformation
+  # Extract sample names from sample_identifier (e.g., "20250116_OE_TR_10S_MECFS_GPEP_HC13" -> "HC13")
+  sample_group_mapping <- StudyInformation %>%
+    mutate(
+      sample_extracted = str_extract(sample_identifier, "(HC\\d+|M\\d+)$") %>%
+        str_to_lower()  # Convert to lowercase to match glyco_long sample names
+    ) %>%
+    select(sample_extracted, sample_group) %>%
+    rename(sample = sample_extracted, group = sample_group)
+  
+  # Join group information with the cleaned sample names
+  glyco_peptide_groups_long <- glyco_peptide_groups_long %>%
+    left_join(sample_group_mapping, by = "sample")
+  
+  # Debug: Check if any groups are still NA
+  na_count <- sum(is.na(glyco_peptide_groups_long$group))
+  if (na_count > 0) {
+    cat("WARNING:", na_count, "rows have NA group values\n")
+    cat("Sample names in data:\n")
+    print(unique(glyco_peptide_groups_long$sample))
+    cat("\nSample names in mapping:\n")
+    print(unique(sample_group_mapping$sample))
+  }
+  
+  # Calculate basic statistics
+  all_samples <- unique(glyco_peptide_groups_long$sample)
+  total_samples <- length(all_samples)
+  
 
  find_unique_values <- function(df, column_name) {
                # Check if the column exists
